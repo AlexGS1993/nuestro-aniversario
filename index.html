@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4.º Aniversario ❤️</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Montserrat', sans-serif;
+      /* Fondo azul suave romántico */
+      background: #eef4f8;
+      background-image: radial-gradient(#d0e1fd 1px, transparent 1px), radial-gradient(#d0e1fd 1px, #eef4f8 1px);
+      background-size: 40px 40px;
+      background-position: 0 0, 20px 20px;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: #2b3a4a;
+    }
+
+    .card {
+      background: #ffffff;
+      /* Textura estilo lino suave */
+      background-image: linear-gradient(0deg, rgba(255,255,255,0.75), rgba(255,255,255,0.75)), url('https://www.transparenttextures.com/patterns/linen.png');
+      border-radius: 24px;
+      padding: 30px 25px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 15px 35px rgba(43, 58, 74, 0.12);
+      border: 1px solid #d8e5f2;
+      position: relative;
+    }
+
+    /* Detalle floral */
+    .flower-icon {
+      font-size: 1.8rem;
+      color: #4a7bb0;
+      margin-bottom: 5px;
+    }
+
+    .anniversary-tag {
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #6c8ea4;
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      color: #1c3b57;
+      font-size: 2.2rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    h2 {
+      font-size: 0.85rem;
+      color: #8da5b8;
+      font-weight: 400;
+      margin-bottom: 20px;
+    }
+
+    .img-container {
+      width: 100%;
+      height: 270px;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 22px;
+      background-color: #f0f4f8;
+      border: 4px solid #ffffff;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.06);
+    }
+
+    .img-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+
+    .message-box {
+      background: #f7fafc;
+      border-left: 3px solid #4a7bb0;
+      padding: 15px 18px;
+      border-radius: 0 12px 12px 0;
+      margin-bottom: 20px;
+    }
+
+    p.message {
+      font-family: 'Cormorant Garamond', serif;
+      color: #2c4257;
+      font-size: 1.35rem;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    .footer {
+      font-size: 0.8rem;
+      color: #9cb1c9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .footer span {
+      color: #4a7bb0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="flower-icon">🪻</div>
+    <div class="anniversary-tag">Bodas de Lino & Flores</div>
+    <h1>4.º Aniversario</h1>
+    <h2 id="date-title">Cargando fecha...</h2>
+    
+    <div class="img-container">
+      <img id="daily-img" src="" alt="Nuestra foto del día">
+    </div>
+    
+    <div class="message-box">
+      <p class="message" id="daily-msg">Cargando tu detalle de hoy...</p>
+    </div>
+    
+    <div class="footer">
+      Hecho con <span>♥️</span> para ti
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ PEGA AQUÍ TU ENLACE CSV DE GOOGLE SHEETS
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv";
+
+    async function cargarMensaje() {
+      const ahora = new Date();
+      
+      // Fecha en formato YYYY-MM-DD
+      const hoyISO = ahora.toISOString().split('T')[0];
+      
+      // Formatos por si escribes estilo "27/ago/26"
+      const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+      const dia = ahora.getDate();
+      const mesNombre = meses[ahora.getMonth()];
+      const anioCorto = ahora.getFullYear().toString().slice(-2);
+      
+      const hoyFormato1 = ${dia}/${mesNombre}/${anioCorto}.toLowerCase();
+      const hoyFormato2 = ${dia.toString().padStart(2, '0')}/${mesNombre}/${anioCorto}.toLowerCase();
+
+      // Formato legible para la pantalla (ej. 27 de agosto)
+      const opcionesFecha = { day: 'numeric', month: 'long' };
+      document.getElementById('date-title').innerText = ahora.toLocaleDateString('es-ES', opcionesFecha);
+
+      try {
+        const respuesta = await fetch(SHEET_CSV_URL);
+        const texto = await respuesta.text();
+        
+        // Separar filas
+        const filas = texto.split('\n').map(r => r.split(','));
+
+        // Buscar coincidencias de fecha
+        const filaHoy = filas.find(f => {
+          if (!f[0]) return false;
+          const fechaCelda = f[0].trim().toLowerCase().replace(/'/g, '').replace(/"/g, '');
+          return fechaCelda === hoyISO || fechaCelda === hoyFormato1 || fechaCelda === hoyFormato2;
+        });
+
+        if (filaHoy) {
+          document.getElementById('daily-msg').innerText = "${filaHoy[1].replace(/"/g, '')}";
+          if (filaHoy[2]) {
+            document.getElementById('daily-img').src = filaHoy[2].trim().replace(/"/g, '');
+          }
+        } else {
+          // Mensaje si no pones fecha
+          document.getElementById('daily-msg').innerText = "Gracias por estos 4 años maravillosos. Eres mi lugar favorito en el mundo.";
+          document.getElementById('daily-img').src = "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600";
+        }
+      } catch (e) {
+        document.getElementById('daily-msg').innerText = "Te amo hoy y siempre. ¡Feliz 4.º Aniversario!";
+        document.getElementById('daily-img').src = "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600";
+      }
+    }
+
+    cargarMensaje();
+  </script>
+</body>
+</html>
