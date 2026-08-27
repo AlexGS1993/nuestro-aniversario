@@ -108,42 +108,44 @@
     </div>
   </div>
 
+  <!-- API oficial de Google para leer hojas de cálculo -->
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
-    const RAW_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv";
-    const SHEET_CSV_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent(RAW_CSV_URL);
+    google.charts.load('current', {'packages':['corechart']});
+    google.charts.setOnLoadCallback(cargarMensaje);
 
-    async function cargarMensaje() {
+    function cargarMensaje() {
       const ahora = new Date();
       const opcionesFecha = { day: 'numeric', month: 'long' };
       document.getElementById('date-title').innerText = ahora.toLocaleDateString('es-ES', opcionesFecha);
 
-      try {
-        const respuesta = await fetch(SHEET_CSV_URL + "&t=" + new Date().getTime());
-        if (!respuesta.ok) throw new Error("Error al obtener datos");
-        
-        const texto = await respuesta.text();
-        const lineas = texto.split('\n');
-        
-        // Separar celdas por comas respetando comillas
-        const filas = lineas.map(linea => linea.split(/,(?=(?:(?:[^"]"){2})[^"]*$)/));
+      // Usando el ID directo de tu Google Sheet
+      const query = new google.visualization.Query('https://docs.google.com/spreadsheets/d/1OmDB5G1sZ72b58smMAOcM5jCf9tx_i4GQ134h7qV41I/gviz/tq?tqx=out:json');
+      
+      query.send(function(response) {
+        if (response.isError()) {
+          console.error('Error Google:', response.getMessage());
+          return;
+        }
 
-        // Filtrar filas que tengan mensaje válido
-        const filasValidas = filas.filter(f => f.length >= 2 && f[1] && f[1].trim() !== "" && !f[0].toLowerCase().includes("fecha"));
+        const data = response.getDataTable();
+        const totalFilas = data.getNumberOfRows();
 
-        if (filasValidas.length > 0) {
-          const dia = ahora.getDate().toString();
-          
-          // Buscar por día (27) o tomar la primera fila por defecto
-          let filaHoy = filasValidas.find(f => f[0].includes(dia) || f[0].includes("2026-08-27"));
-          if (!filaHoy) filaHoy = filasValidas[0];
+        if (totalFilas > 0) {
+          // Toma la fila de hoy (Fila 1 = A2)
+          let filaSeleccionada = 0;
 
-          // Asignar mensaje
-          const mensaje = filaHoy[1].replace(/^"|"$/g, '').trim();
-          document.getElementById('daily-msg').innerText = "${mensaje}";
+          // Obtener datos
+          let mensaje = data.getValue(filaSeleccionada, 1) || "";
+          let imgUrl = data.getValue(filaSeleccionada, 2) || "";
 
-          // Asignar imagen
-          if (filaHoy[2] && filaHoy[2].trim() !== "") {
-            let imgUrl = filaHoy[2].replace(/^"|"$/g, '').trim();
+          // Mostrar mensaje
+          if (mensaje) {
+            document.getElementById('daily-msg').innerText = "${mensaje}";
+          }
+
+          // Mostrar foto (y arreglar si es de Google Drive)
+          if (imgUrl) {
             if (imgUrl.includes("drive.google.com")) {
               const match = imgUrl.match(/\/d\/([^\/\?]+)/);
               if (match) {
@@ -153,12 +155,8 @@
             document.getElementById('daily-img').src = imgUrl;
           }
         }
-      } catch (e) {
-        console.error("Error al cargar datos:", e);
-      }
+      });
     }
-
-    cargarMensaje();
   </script>
 </body>
 </html>
