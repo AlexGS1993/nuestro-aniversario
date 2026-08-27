@@ -64,6 +64,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transition: opacity 0.5s ease;
     }
     .msg-box {
       background: #f8fafc;
@@ -93,55 +94,81 @@
     <div class="flower-icon">🪻</div>
     <div class="subtitle">Bodas de Lino & Flores</div>
     <h1>4.º Aniversario</h1>
-    <div class="date-display">27 de agosto</div>
+    <div class="date-display" id="date-title">27 de agosto</div>
 
     <div class="img-container">
       <img id="daily-img" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600" alt="Foto">
     </div>
 
     <div class="msg-box">
-      <p id="daily-msg">Cargando...</p>
+      <p id="daily-msg">FELIZ CUARTO ANIVERSARIO</p>
     </div>
 
     <div class="footer">
-      Hecho con <span>♥️</span> para ti
+      Hecho con <span>♥</span> para ti
     </div>
   </div>
 
   <script>
-    // Tu ID de Google Sheets
     const SHEET_ID = '1OmDB5G1sZ72b58smMAOcM5jCf9tx_i4GQ134h7qV41I';
-    const URL = https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;
+    const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
-    fetch(URL)
-      .then(res => res.text())
-      .then(data => {
-        // Limpiar la respuesta JSON de Google
-        const json = JSON.parse(data.substring(47, data.length - 2));
-        const filas = json.table.rows;
+    // Función para hacer peticiones con límite de tiempo (Timeout de 8 segundos)
+    function fetchConTimeout(url, timeoutMs = 8000) {
+      return Promise.race([
+        fetch(url),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Tiempo de espera agotado')), timeoutMs)
+        )
+      ]);
+    }
 
-        // Fila 0 en el JSON corresponde a la fila 2 de tu tabla (la primera con datos)
-        if (filas.length > 0) {
-          const mensaje = filas[0].c[1] ? filas[0].c[1].v : "";
-          let fotoUrl = filas[0].c[2] ? filas[0].c[2].v : "";
+    // Intentar conectar hasta 3 veces si la red falla
+    async function obtenerDatosConReintentos(reintentos = 3) {
+      for (let i = 0; i < reintentos; i++) {
+        try {
+          const res = await fetchConTimeout(`${URL}&nocache=${Date.now()}`, 8000);
+          if (!res.ok) throw new Error("Error HTTP");
+          
+          const data = await res.text();
+          const json = JSON.parse(data.substring(47, data.length - 2));
+          return json.table.rows;
+        } catch (err) {
+          console.warn(`Intento ${i + 1} fallido. Reintentando...`);
+          if (i === reintentos - 1) throw err; // Si se agotan los intentos, lanza error
+          await new Promise(r => setTimeout(r, 1000)); // Esperar 1 seg antes del reintento
+        }
+      }
+    }
 
-          if (mensaje) {
-            document.getElementById('daily-msg').innerText = "${mensaje}";
+    async function iniciarCarga() {
+      try {
+        const filas = await obtenerDatosConReintentos(3);
+
+        if (filas && filas.length > 0) {
+          const m = filas[0].c && filas[0].c[1] ? filas[0].c[1].v : null;
+          let f = filas[0].c && filas[0].c[2] ? filas[0].c[2].v : null;
+
+          if (m) {
+            document.getElementById('daily-msg').innerText = `"${m}"`;
           }
 
-          if (fotoUrl) {
-            if (fotoUrl.includes("drive.google.com")) {
-              const id = fotoUrl.match(/\/d\/([^\/\?]+)/);
-              if (id) fotoUrl = https://lh3.googleusercontent.com/d/${id[1]};
+          if (f) {
+            if (f.includes("drive.google.com")) {
+              const id = f.match(/\/d\/([^\/\?]+)/);
+              if (id) f = `https://lh3.googleusercontent.com/d/${id[1]}`;
             }
-            document.getElementById('daily-img').src = fotoUrl;
+            document.getElementById('daily-img').src = f;
           }
         }
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById('daily-msg').innerText = '"FELIZ CUARTO ANIVERSARIO"';
-      });
+      } catch (e) {
+        console.log("No se pudo conectar a Google Sheets a tiempo. Mostrando respaldo local.");
+        // Mantiene la frase "FELIZ CUARTO ANIVERSARIO" para que nunca quede vacía
+      }
+    }
+
+    iniciarCarga();
   </script>
 </body>
 </html>
+
