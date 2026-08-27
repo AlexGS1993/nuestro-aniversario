@@ -64,6 +64,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transition: opacity 0.3s ease;
     }
     .msg-box {
       background: #f8fafc;
@@ -93,14 +94,14 @@
     <div class="flower-icon">🪻</div>
     <div class="subtitle">Bodas de Lino & Flores</div>
     <h1>4.º Aniversario</h1>
-    <div class="date-display" id="date-title">Cargando fecha...</div>
+    <div class="date-display" id="date-title">27 de agosto</div>
 
     <div class="img-container">
       <img id="daily-img" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600" alt="Foto del día">
     </div>
 
     <div class="msg-box">
-      <p id="daily-msg">Cargando mensaje...</p>
+      <p id="daily-msg">FELIZ CUARTO ANIVERSARIO</p>
     </div>
 
     <div class="footer">
@@ -109,66 +110,145 @@
   </div>
 
   <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv";
+    const SHEET_ID = "1OmDB5G1sZ72b58smMAOcM5jCf9tx_i4GQ134h7qV41I";
 
-    async function cargarEnTiempoReal() {
-      // 1. Poner fecha de hoy bonita en la pantalla
+    // Parser CSV seguro que maneja comillas y saltos de línea
+    function parseCSV(text) {
+      const result = [];
+      let row = [];
+      let cell = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        const next = text[i+1];
+
+        if (c === '"') {
+          if (inQuotes && next === '"') {
+            cell += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (c === ',' && !inQuotes) {
+          row.push(cell.trim());
+          cell = '';
+        } else if ((c === '\r' || c === '\n') && !inQuotes) {
+          if (c === '\r' && next === '\n') i++;
+          row.push(cell.trim());
+          if (row.some(field => field !== '')) result.push(row);
+          row = [];
+          cell = '';
+        } else {
+          cell += c;
+        }
+      }
+      if (cell || row.length > 0) {
+        row.push(cell.trim());
+        if (row.some(field => field !== '')) result.push(row);
+      }
+      return result;
+    }
+
+    // Convertir URLs de Google Drive a imágenes directas públicas
+    function arreglarUrlImagen(url) {
+      if (!url) return '';
+      let limpia = url.trim();
+      if (limpia.includes("drive.google.com")) {
+        const match = limpia.match(/\/d\/([^\/\?]+)/) || limpia.match(/id=([^&]+)/);
+        if (match && match[1]) {
+          return https://lh3.googleusercontent.com/d/${match[1]}=s1000;
+        }
+      }
+      return limpia;
+    }
+
+    async function cargarDatos() {
+      // Poner fecha de hoy
       const hoy = new Date();
       const opcionesFecha = { day: 'numeric', month: 'long' };
       document.getElementById('date-title').innerText = hoy.toLocaleDateString('es-ES', opcionesFecha);
 
+      // Métodos de conexión ordenados por velocidad y confiabilidad
+      const fuentes = [
+        https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv&t=${Date.now()},
+        https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&t=${Date.now()},
+        https://api.allorigins.win/raw?url= + encodeURIComponent(https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv&t=${Date.now()})
+      ];
+
+      let csvTexto = null;
+
+      for (const url of fuentes) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 seg por intento
+          const res = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const txt = await res.text();
+            if (txt && txt.length > 10) {
+              csvTexto = txt;
+              break;
+            }
+          }
+        } catch (e) {
+          console.warn("Falló un método de conexión, intentando el siguiente...");
+        }
+      }
+
+      if (!csvTexto) {
+        console.log("Servidor no respondió a tiempo. Se conserva mensaje por defecto.");
+        return;
+      }
+
       try {
-        // 2. Pedir datos frescos sin guardar en memoria Caché
-        const urlTiempoReal = ${CSV_URL}&_t=${Date.now()};
-        const res = await fetch(urlTiempoReal);
-        const textoCSV = await res.text();
+        const filas = parseCSV(csvTexto);
+        if (filas.length <= 1) return;
 
-        // 3. Separar por filas y parsear correctamente ignorando comas dentro de comillas
-        const lineas = textoCSV.split('\n');
-        const filas = lineas.map(l => l.split(/,(?=(?:(?:[^"]"){2})[^"]*$)/));
-
-        // 4. Preparar la búsqueda de hoy
-        const diaNum = hoy.getDate().toString(); // "27"
+        // Formatos de fecha de hoy para buscar en la tabla
+        const diaNum = hoy.getDate().toString();
+        const mesNum = (hoy.getMonth() + 1).toString().padStart(2, '0');
+        const anioNum = hoy.getFullYear().toString();
         
-        // Buscar fila que coincida con "27" o la fecha de hoy
-        let filaHoy = filas.find(f => {
+        const stringFecha1 = ${diaNum}/${mesNum}/${anioNum};
+        const stringFecha2 = ${anioNum}-${mesNum}-${diaNum.padStart(2, '0')};
+
+        // Buscar la fila correspondiente al día de hoy
+        let filaHoy = filas.find((f, index) => {
+          if (index === 0) return false; // Ignorar encabezado
           if (!f[0]) return false;
-          const celdaFecha = f[0].replace(/"/g, '').trim();
-          return celdaFecha.includes(diaNum) || celdaFecha.includes("2026-08-27") || celdaFecha.includes("27/08");
+          const fechaCelda = f[0].toLowerCase();
+          return fechaCelda.includes(stringFecha1) || 
+                 fechaCelda.includes(stringFecha2) || 
+                 fechaCelda.startsWith(diaNum) ||
+                 fechaCelda.includes("27");
         });
 
-        // Si no la encuentra, usa la Fila 2 (A2) por seguridad
-        if (!filaHoy && filas.length > 1) {
-          filaHoy = filas[1];
-        }
+        // Si no la encuentra por fecha, usar la Fila 2 de la tabla
+        if (!filaHoy) filaHoy = filas[1];
 
-        // 5. Asignar mensaje y foto si existen
         if (filaHoy) {
-          const mensajeRaw = filaHoy[1] ? filaHoy[1].replace(/^"|"$/g, '').trim() : "";
-          let fotoRaw = filaHoy[2] ? filaHoy[2].replace(/^"|"$/g, '').trim() : "";
+          const mensaje = filaHoy[1] ? filaHoy[1] : '';
+          const fotoUrl = filaHoy[2] ? filaHoy[2] : '';
 
-          if (mensajeRaw) {
-            document.getElementById('daily-msg').innerText = "${mensajeRaw}";
+          if (mensaje) {
+            document.getElementById('daily-msg').innerText = "${mensaje}";
           }
 
-          if (fotoRaw) {
-            // Si es link de Google Drive, convertir a vista previa pública
-            if (fotoRaw.includes("drive.google.com")) {
-              const match = fotoRaw.match(/\/d\/([^\/\?]+)/) || fotoRaw.match(/id=([^&]+)/);
-              if (match && match[1]) {
-                fotoRaw = https://lh3.googleusercontent.com/d/${match[1]}=s1000;
-              }
+          if (fotoUrl) {
+            const urlFinal = arreglarUrlImagen(fotoUrl);
+            if (urlFinal) {
+              document.getElementById('daily-img').src = urlFinal;
             }
-            document.getElementById('daily-img').src = fotoRaw;
           }
         }
       } catch (err) {
-        console.error("Error al actualizar:", err);
+        console.error("Error al procesar datos:", err);
       }
     }
 
-    cargarEnTiempoReal();
+    cargarDatos();
   </script>
 </body>
 </html>
-
