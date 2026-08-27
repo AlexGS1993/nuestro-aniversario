@@ -109,7 +109,8 @@
   </div>
 
   <script>
-    const SHEET_CSV_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAXfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHlzlbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv");
+    const RAW_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv";
+    const SHEET_CSV_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent(RAW_CSV_URL);
 
     async function cargarMensaje() {
       const ahora = new Date();
@@ -117,34 +118,32 @@
       document.getElementById('date-title').innerText = ahora.toLocaleDateString('es-ES', opcionesFecha);
 
       try {
-        const respuesta = await fetch(SHEET_CSV_URL + '&t=' + new Date().getTime());
-        if (!respuesta.ok) throw new Error("Error de red");
+        const respuesta = await fetch(SHEET_CSV_URL + "&t=" + new Date().getTime());
+        if (!respuesta.ok) throw new Error("Error al obtener datos");
         
         const texto = await respuesta.text();
         const lineas = texto.split('\n');
         
-        // Separar las celdas considerando comas
-        const filas = lineas.map(l => l.split(/,(?=(?:(?:[^"]"){2})[^"]*$)/));
+        // Separar celdas por comas respetando comillas
+        const filas = lineas.map(linea => linea.split(/,(?=(?:(?:[^"]"){2})[^"]*$)/));
 
-        // Filtrar filas vacías o encabezados
+        // Filtrar filas que tengan mensaje válido
         const filasValidas = filas.filter(f => f.length >= 2 && f[1] && f[1].trim() !== "" && !f[0].toLowerCase().includes("fecha"));
 
         if (filasValidas.length > 0) {
-          // Intentar buscar la fecha de hoy (dia 27)
-          let filaHoy = filasValidas.find(f => f[0].includes("27") || f[0].includes("2026-08-27"));
-
-          // Si no la encuentra por fecha, toma la primera disponible de tu tabla (A2)
+          const dia = ahora.getDate().toString();
+          
+          // Buscar por día (27) o tomar la primera fila por defecto
+          let filaHoy = filasValidas.find(f => f[0].includes(dia) || f[0].includes("2026-08-27"));
           if (!filaHoy) filaHoy = filasValidas[0];
 
-          // Asignar Mensaje
+          // Asignar mensaje
           const mensaje = filaHoy[1].replace(/^"|"$/g, '').trim();
           document.getElementById('daily-msg').innerText = "${mensaje}";
 
-          // Asignar Foto
+          // Asignar imagen
           if (filaHoy[2] && filaHoy[2].trim() !== "") {
             let imgUrl = filaHoy[2].replace(/^"|"$/g, '').trim();
-            
-            // Convertir Drive a link directo si es necesario
             if (imgUrl.includes("drive.google.com")) {
               const match = imgUrl.match(/\/d\/([^\/\?]+)/);
               if (match) {
@@ -155,7 +154,7 @@
           }
         }
       } catch (e) {
-        console.log("Error:", e);
+        console.error("Error al cargar datos:", e);
       }
     }
 
