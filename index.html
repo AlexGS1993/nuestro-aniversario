@@ -93,14 +93,14 @@
     <div class="flower-icon">🪻</div>
     <div class="subtitle">Bodas de Lino & Flores</div>
     <h1>4.º Aniversario</h1>
-    <div class="date-display" id="date-title">Cargando fecha...</div>
+    <div class="date-display">27 de agosto</div>
 
     <div class="img-container">
-      <img id="daily-img" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600" alt="Nuestra foto del día">
+      <img id="daily-img" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600" alt="Foto">
     </div>
 
     <div class="msg-box">
-      <p id="daily-msg">Cargando tu detalle de hoy...</p>
+      <p id="daily-msg">Cargando...</p>
     </div>
 
     <div class="footer">
@@ -108,55 +108,40 @@
     </div>
   </div>
 
-  <!-- API oficial de Google para leer hojas de cálculo -->
-  <script src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
-    google.charts.load('current', {'packages':['corechart']});
-    google.charts.setOnLoadCallback(cargarMensaje);
+    // Tu ID de Google Sheets
+    const SHEET_ID = '1OmDB5G1sZ72b58smMAOcM5jCf9tx_i4GQ134h7qV41I';
+    const URL = https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;
 
-    function cargarMensaje() {
-      const ahora = new Date();
-      const opcionesFecha = { day: 'numeric', month: 'long' };
-      document.getElementById('date-title').innerText = ahora.toLocaleDateString('es-ES', opcionesFecha);
+    fetch(URL)
+      .then(res => res.text())
+      .then(data => {
+        // Limpiar la respuesta JSON de Google
+        const json = JSON.parse(data.substring(47, data.length - 2));
+        const filas = json.table.rows;
 
-      // Usando el ID directo de tu Google Sheet
-      const query = new google.visualization.Query('https://docs.google.com/spreadsheets/d/1OmDB5G1sZ72b58smMAOcM5jCf9tx_i4GQ134h7qV41I/gviz/tq?tqx=out:json');
-      
-      query.send(function(response) {
-        if (response.isError()) {
-          console.error('Error Google:', response.getMessage());
-          return;
-        }
+        // Fila 0 en el JSON corresponde a la fila 2 de tu tabla (la primera con datos)
+        if (filas.length > 0) {
+          const mensaje = filas[0].c[1] ? filas[0].c[1].v : "";
+          let fotoUrl = filas[0].c[2] ? filas[0].c[2].v : "";
 
-        const data = response.getDataTable();
-        const totalFilas = data.getNumberOfRows();
-
-        if (totalFilas > 0) {
-          // Toma la fila de hoy (Fila 1 = A2)
-          let filaSeleccionada = 0;
-
-          // Obtener datos
-          let mensaje = data.getValue(filaSeleccionada, 1) || "";
-          let imgUrl = data.getValue(filaSeleccionada, 2) || "";
-
-          // Mostrar mensaje
           if (mensaje) {
             document.getElementById('daily-msg').innerText = "${mensaje}";
           }
 
-          // Mostrar foto (y arreglar si es de Google Drive)
-          if (imgUrl) {
-            if (imgUrl.includes("drive.google.com")) {
-              const match = imgUrl.match(/\/d\/([^\/\?]+)/);
-              if (match) {
-                imgUrl = https://lh3.googleusercontent.com/d/${match[1]};
-              }
+          if (fotoUrl) {
+            if (fotoUrl.includes("drive.google.com")) {
+              const id = fotoUrl.match(/\/d\/([^\/\?]+)/);
+              if (id) fotoUrl = https://lh3.googleusercontent.com/d/${id[1]};
             }
-            document.getElementById('daily-img').src = imgUrl;
+            document.getElementById('daily-img').src = fotoUrl;
           }
         }
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('daily-msg').innerText = '"FELIZ CUARTO ANIVERSARIO"';
       });
-    }
   </script>
 </body>
 </html>
