@@ -64,7 +64,6 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: opacity 0.5s ease;
     }
     .msg-box {
       background: #f8fafc;
@@ -94,80 +93,81 @@
     <div class="flower-icon">🪻</div>
     <div class="subtitle">Bodas de Lino & Flores</div>
     <h1>4.º Aniversario</h1>
-    <div class="date-display" id="date-title">27 de agosto</div>
+    <div class="date-display" id="date-title">Cargando fecha...</div>
 
     <div class="img-container">
-      <img id="daily-img" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600" alt="Foto">
+      <img id="daily-img" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600" alt="Foto del día">
     </div>
 
     <div class="msg-box">
-      <p id="daily-msg">FELIZ CUARTO ANIVERSARIO</p>
+      <p id="daily-msg">Cargando mensaje...</p>
     </div>
 
     <div class="footer">
-      Hecho con <span>♥</span> para ti
+      Hecho con <span>♥️</span> para ti
     </div>
   </div>
 
   <script>
-    const SHEET_ID = '1OmDB5G1sZ72b58smMAOcM5jCf9tx_i4GQ134h7qV41I';
-    const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv";
 
-    // Función para hacer peticiones con límite de tiempo (Timeout de 8 segundos)
-    function fetchConTimeout(url, timeoutMs = 8000) {
-      return Promise.race([
-        fetch(url),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Tiempo de espera agotado')), timeoutMs)
-        )
-      ]);
-    }
+    async function cargarEnTiempoReal() {
+      // 1. Poner fecha de hoy bonita en la pantalla
+      const hoy = new Date();
+      const opcionesFecha = { day: 'numeric', month: 'long' };
+      document.getElementById('date-title').innerText = hoy.toLocaleDateString('es-ES', opcionesFecha);
 
-    // Intentar conectar hasta 3 veces si la red falla
-    async function obtenerDatosConReintentos(reintentos = 3) {
-      for (let i = 0; i < reintentos; i++) {
-        try {
-          const res = await fetchConTimeout(`${URL}&nocache=${Date.now()}`, 8000);
-          if (!res.ok) throw new Error("Error HTTP");
-          
-          const data = await res.text();
-          const json = JSON.parse(data.substring(47, data.length - 2));
-          return json.table.rows;
-        } catch (err) {
-          console.warn(`Intento ${i + 1} fallido. Reintentando...`);
-          if (i === reintentos - 1) throw err; // Si se agotan los intentos, lanza error
-          await new Promise(r => setTimeout(r, 1000)); // Esperar 1 seg antes del reintento
-        }
-      }
-    }
-
-    async function iniciarCarga() {
       try {
-        const filas = await obtenerDatosConReintentos(3);
+        // 2. Pedir datos frescos sin guardar en memoria Caché
+        const urlTiempoReal = ${CSV_URL}&_t=${Date.now()};
+        const res = await fetch(urlTiempoReal);
+        const textoCSV = await res.text();
 
-        if (filas && filas.length > 0) {
-          const m = filas[0].c && filas[0].c[1] ? filas[0].c[1].v : null;
-          let f = filas[0].c && filas[0].c[2] ? filas[0].c[2].v : null;
+        // 3. Separar por filas y parsear correctamente ignorando comas dentro de comillas
+        const lineas = textoCSV.split('\n');
+        const filas = lineas.map(l => l.split(/,(?=(?:(?:[^"]"){2})[^"]*$)/));
 
-          if (m) {
-            document.getElementById('daily-msg').innerText = `"${m}"`;
+        // 4. Preparar la búsqueda de hoy
+        const diaNum = hoy.getDate().toString(); // "27"
+        
+        // Buscar fila que coincida con "27" o la fecha de hoy
+        let filaHoy = filas.find(f => {
+          if (!f[0]) return false;
+          const celdaFecha = f[0].replace(/"/g, '').trim();
+          return celdaFecha.includes(diaNum) || celdaFecha.includes("2026-08-27") || celdaFecha.includes("27/08");
+        });
+
+        // Si no la encuentra, usa la Fila 2 (A2) por seguridad
+        if (!filaHoy && filas.length > 1) {
+          filaHoy = filas[1];
+        }
+
+        // 5. Asignar mensaje y foto si existen
+        if (filaHoy) {
+          const mensajeRaw = filaHoy[1] ? filaHoy[1].replace(/^"|"$/g, '').trim() : "";
+          let fotoRaw = filaHoy[2] ? filaHoy[2].replace(/^"|"$/g, '').trim() : "";
+
+          if (mensajeRaw) {
+            document.getElementById('daily-msg').innerText = "${mensajeRaw}";
           }
 
-          if (f) {
-            if (f.includes("drive.google.com")) {
-              const id = f.match(/\/d\/([^\/\?]+)/);
-              if (id) f = `https://lh3.googleusercontent.com/d/${id[1]}`;
+          if (fotoRaw) {
+            // Si es link de Google Drive, convertir a vista previa pública
+            if (fotoRaw.includes("drive.google.com")) {
+              const match = fotoRaw.match(/\/d\/([^\/\?]+)/) || fotoRaw.match(/id=([^&]+)/);
+              if (match && match[1]) {
+                fotoRaw = https://lh3.googleusercontent.com/d/${match[1]}=s1000;
+              }
             }
-            document.getElementById('daily-img').src = f;
+            document.getElementById('daily-img').src = fotoRaw;
           }
         }
-      } catch (e) {
-        console.log("No se pudo conectar a Google Sheets a tiempo. Mostrando respaldo local.");
-        // Mantiene la frase "FELIZ CUARTO ANIVERSARIO" para que nunca quede vacía
+      } catch (err) {
+        console.error("Error al actualizar:", err);
       }
     }
 
-    iniciarCarga();
+    cargarEnTiempoReal();
   </script>
 </body>
 </html>
