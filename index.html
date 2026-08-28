@@ -4,10 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bodas de Lino - 4.º Aniversario</title>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500&display=swap');
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       background-color: #f4f6f8;
       background-image: radial-gradient(#d0d7de 1px, transparent 1px);
@@ -20,6 +26,7 @@
       align-items: center;
       padding: 20px;
     }
+
     .card {
       background: #ffffff;
       max-width: 420px;
@@ -30,7 +37,12 @@
       text-align: center;
       border: 1px solid #eef2f5;
     }
-    .flower-icon { font-size: 32px; margin-bottom: 8px; }
+
+    .flower-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
     .subtitle {
       font-size: 11px;
       letter-spacing: 2px;
@@ -39,18 +51,21 @@
       font-weight: 500;
       margin-bottom: 6px;
     }
+
     h1 {
       font-family: 'Playfair Display', serif;
       font-size: 28px;
       color: #1a252f;
       margin-bottom: 4px;
     }
+
     .date-display {
       font-size: 13px;
       color: #95a5a6;
       margin-bottom: 24px;
       font-style: italic;
     }
+
     .img-container {
       width: 100%;
       height: 260px;
@@ -60,12 +75,14 @@
       margin-bottom: 24px;
       box-shadow: inset 0 0 10px rgba(0,0,0,0.03);
     }
+
     .img-container img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       transition: opacity 0.3s ease;
     }
+
     .msg-box {
       background: #f8fafc;
       border-left: 3px solid #4a6fa5;
@@ -74,6 +91,7 @@
       text-align: left;
       margin-bottom: 28px;
     }
+
     .msg-box p {
       font-family: 'Playfair Display', serif;
       font-size: 16px;
@@ -81,174 +99,441 @@
       color: #34495e;
       font-style: italic;
     }
+
     .footer {
       font-size: 12px;
       color: #bdc3c7;
     }
-    .footer span { color: #e74c3c; }
+
+    .footer span {
+      color: #e74c3c;
+    }
   </style>
 </head>
+
 <body>
 
   <div class="card">
     <div class="flower-icon">🪻</div>
-    <div class="subtitle">Bodas de Lino & Flores</div>
-    <h1>4.º Aniversario</h1>
-    <div class="date-display" id="date-title">27 de agosto</div>
+
+    <div class="subtitle">
+      Bodas de Lino & Flores
+    </div>
+
+    <h1>
+      4.º Aniversario
+    </h1>
+
+    <div class="date-display" id="date-title">
+      27 de agosto
+    </div>
 
     <div class="img-container">
-      <img id="daily-img" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600" alt="Foto del día">
+      <img
+        id="daily-img"
+        src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600"
+        alt="Foto del día"
+      >
     </div>
 
     <div class="msg-box">
-      <p id="daily-msg">FELIZ CUARTO ANIVERSARIO</p>
+      <p id="daily-msg">
+        FELIZ CUARTO ANIVERSARIO
+      </p>
     </div>
 
     <div class="footer">
-      Hecho con <span>♥️</span> para ti
+      Hecho con <span>♥</span> para ti
     </div>
   </div>
 
+
   <script>
+
+    // =========================================================
+    // CONFIGURACIÓN
+    // =========================================================
+
     const SHEET_ID = "1OmDB5G1sZ72b58smMAOcM5jCf9tx_i4GQ134h7qV41I";
 
-    // Parser CSV seguro que maneja comillas y saltos de línea
+    const SHEET_URL =
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv";
+
+
+    // =========================================================
+    // VARIABLES PARA DETECTAR CAMBIOS
+    // =========================================================
+
+    let ultimoMensaje = null;
+    let ultimaFoto = null;
+    let cargando = false;
+
+
+    // =========================================================
+    // PARSER CSV
+    // =========================================================
+
     function parseCSV(text) {
+
       const result = [];
       let row = [];
       let cell = '';
       let inQuotes = false;
 
       for (let i = 0; i < text.length; i++) {
+
         const c = text[i];
-        const next = text[i+1];
+        const next = text[i + 1];
 
         if (c === '"') {
+
           if (inQuotes && next === '"') {
             cell += '"';
             i++;
           } else {
             inQuotes = !inQuotes;
           }
+
         } else if (c === ',' && !inQuotes) {
+
           row.push(cell.trim());
           cell = '';
+
         } else if ((c === '\r' || c === '\n') && !inQuotes) {
-          if (c === '\r' && next === '\n') i++;
+
+          if (c === '\r' && next === '\n') {
+            i++;
+          }
+
           row.push(cell.trim());
-          if (row.some(field => field !== '')) result.push(row);
+
+          if (row.some(field => field !== '')) {
+            result.push(row);
+          }
+
           row = [];
           cell = '';
+
         } else {
+
           cell += c;
         }
       }
+
       if (cell || row.length > 0) {
+
         row.push(cell.trim());
-        if (row.some(field => field !== '')) result.push(row);
+
+        if (row.some(field => field !== '')) {
+          result.push(row);
+        }
       }
+
       return result;
     }
 
-    // Convertir URLs de Google Drive a imágenes directas públicas
+
+    // =========================================================
+    // CONVERTIR URL DE GOOGLE DRIVE
+    // =========================================================
+
     function arreglarUrlImagen(url) {
+
       if (!url) return '';
+
       let limpia = url.trim();
+
       if (limpia.includes("drive.google.com")) {
-        const match = limpia.match(/\/d\/([^\/\?]+)/) || limpia.match(/id=([^&]+)/);
+
+        const match =
+          limpia.match(/\/d\/([^\/\?]+)/) ||
+          limpia.match(/id=([^&]+)/);
+
         if (match && match[1]) {
-          return https://lh3.googleusercontent.com/d/${match[1]}=s1000;
+
+          return `https://lh3.googleusercontent.com/d/${match[1]}=s1000`;
         }
       }
+
       return limpia;
     }
 
+
+    // =========================================================
+    // NORMALIZAR FECHA
+    // =========================================================
+
+    function normalizarFecha(fecha) {
+
+      if (!fecha) return '';
+
+      let texto = fecha.trim();
+
+      // Elimina hora si existe
+      texto = texto.split(' ')[0];
+
+      // Formato YYYY-MM-DD
+      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(texto)) {
+
+        const partes = texto.split('-');
+
+        return `${partes[0]}-${partes[1].padStart(2, '0')}-${partes[2].padStart(2, '0')}`;
+      }
+
+      // Formato DD/MM/YYYY
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(texto)) {
+
+        const partes = texto.split('/');
+
+        return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+      }
+
+      return texto;
+    }
+
+
+    // =========================================================
+    // CARGAR DATOS DEL GOOGLE SHEET
+    // =========================================================
+
     async function cargarDatos() {
-      // Poner fecha de hoy
-      const hoy = new Date();
-      const opcionesFecha = { day: 'numeric', month: 'long' };
-      document.getElementById('date-title').innerText = hoy.toLocaleDateString('es-ES', opcionesFecha);
 
-      // Métodos de conexión ordenados por velocidad y confiabilidad
-      const fuentes = [
-        https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv&t=${Date.now()},
-        https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&t=${Date.now()},
-        https://api.allorigins.win/raw?url= + encodeURIComponent(https://docs.google.com/spreadsheets/d/e/2PACX-1vSz-258MAxfAP-9ryBlUbqwAEtNTZpb8qWhR8mA4WRxDJVHIzIbYbQR2FHRWRYZgz6wfU-EhyfBJ9YH/pub?output=csv&t=${Date.now()})
-      ];
+      // Evita que dos consultas se ejecuten simultáneamente
+      if (cargando) return;
 
-      let csvTexto = null;
-
-      for (const url of fuentes) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 seg por intento
-          const res = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeoutId);
-
-          if (res.ok) {
-            const txt = await res.text();
-            if (txt && txt.length > 10) {
-              csvTexto = txt;
-              break;
-            }
-          }
-        } catch (e) {
-          console.warn("Falló un método de conexión, intentando el siguiente...");
-        }
-      }
-
-      if (!csvTexto) {
-        console.log("Servidor no respondió a tiempo. Se conserva mensaje por defecto.");
-        return;
-      }
+      cargando = true;
 
       try {
-        const filas = parseCSV(csvTexto);
-        if (filas.length <= 1) return;
 
-        // Formatos de fecha de hoy para buscar en la tabla
-        const diaNum = hoy.getDate().toString();
-        const mesNum = (hoy.getMonth() + 1).toString().padStart(2, '0');
-        const anioNum = hoy.getFullYear().toString();
-        
-        const stringFecha1 = ${diaNum}/${mesNum}/${anioNum};
-        const stringFecha2 = ${anioNum}-${mesNum}-${diaNum.padStart(2, '0')};
+        const hoy = new Date();
 
-        // Buscar la fila correspondiente al día de hoy
-        let filaHoy = filas.find((f, index) => {
-          if (index === 0) return false; // Ignorar encabezado
-          if (!f[0]) return false;
-          const fechaCelda = f[0].toLowerCase();
-          return fechaCelda.includes(stringFecha1) || 
-                 fechaCelda.includes(stringFecha2) || 
-                 fechaCelda.startsWith(diaNum) ||
-                 fechaCelda.includes("27");
+        const dia = hoy.getDate()
+          .toString()
+          .padStart(2, '0');
+
+        const mes = (hoy.getMonth() + 1)
+          .toString()
+          .padStart(2, '0');
+
+        const anio = hoy.getFullYear()
+          .toString();
+
+        const fechaHoy = `${anio}-${mes}-${dia}`;
+
+
+        // Mostrar fecha actual
+
+        const opcionesFecha = {
+          day: 'numeric',
+          month: 'long'
+        };
+
+        document.getElementById('date-title').innerText =
+          hoy.toLocaleDateString('es-ES', opcionesFecha);
+
+
+        // =====================================================
+        // CACHE BUSTER
+        // =====================================================
+
+        const url =
+          `${SHEET_URL}&cachebuster=${Date.now()}`;
+
+
+        const controller = new AbortController();
+
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 8000);
+
+
+        const res = await fetch(url, {
+          method: 'GET',
+          cache: 'no-store',
+          signal: controller.signal
         });
 
-        // Si no la encuentra por fecha, usar la Fila 2 de la tabla
-        if (!filaHoy) filaHoy = filas[1];
 
-        if (filaHoy) {
-          const mensaje = filaHoy[1] ? filaHoy[1] : '';
-          const fotoUrl = filaHoy[2] ? filaHoy[2] : '';
+        clearTimeout(timeoutId);
 
-          if (mensaje) {
-            document.getElementById('daily-msg').innerText = "${mensaje}";
-          }
 
-          if (fotoUrl) {
-            const urlFinal = arreglarUrlImagen(fotoUrl);
-            if (urlFinal) {
-              document.getElementById('daily-img').src = urlFinal;
-            }
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+
+        const csvTexto = await res.text();
+
+
+        if (!csvTexto || csvTexto.length < 10) {
+          throw new Error("El CSV está vacío");
+        }
+
+
+        // =====================================================
+        // PROCESAR CSV
+        // =====================================================
+
+        const filas = parseCSV(csvTexto);
+
+
+        if (filas.length <= 1) {
+          console.warn("No hay datos suficientes en el Spreadsheet.");
+          return;
+        }
+
+
+        // =====================================================
+        // BUSCAR LA FILA DE HOY
+        // =====================================================
+
+        let filaHoy = null;
+
+
+        for (let i = 1; i < filas.length; i++) {
+
+          const fechaCelda = normalizarFecha(filas[i][0]);
+
+          if (fechaCelda === fechaHoy) {
+
+            filaHoy = filas[i];
+
+            break;
           }
         }
-      } catch (err) {
-        console.error("Error al procesar datos:", err);
+
+
+        // Si no encuentra la fecha exacta,
+        // NO seleccionamos arbitrariamente otra fila.
+
+        if (!filaHoy) {
+
+          console.warn(
+            `No se encontró la fecha ${fechaHoy} en el Spreadsheet.`
+          );
+
+          return;
+        }
+
+
+        // =====================================================
+        // OBTENER MENSAJE Y FOTO
+        // =====================================================
+
+        const mensaje =
+          filaHoy[1]
+            ? filaHoy[1].trim()
+            : '';
+
+        const fotoUrl =
+          filaHoy[2]
+            ? filaHoy[2].trim()
+            : '';
+
+
+        const urlFinal =
+          arreglarUrlImagen(fotoUrl);
+
+
+        // =====================================================
+        // ACTUALIZAR MENSAJE SOLO SI CAMBIÓ
+        // =====================================================
+
+        if (mensaje && mensaje !== ultimoMensaje) {
+
+          document.getElementById('daily-msg').innerText =
+            `"${mensaje}"`;
+
+          ultimoMensaje = mensaje;
+        }
+
+
+        // =====================================================
+        // ACTUALIZAR FOTO SOLO SI CAMBIÓ
+        // =====================================================
+
+        if (urlFinal && urlFinal !== ultimaFoto) {
+
+          const imagen =
+            document.getElementById('daily-img');
+
+
+          imagen.style.opacity = '0.3';
+
+
+          const nuevaImagen = new Image();
+
+
+          nuevaImagen.onload = function() {
+
+            imagen.src = urlFinal;
+
+            imagen.style.opacity = '1';
+
+          };
+
+
+          nuevaImagen.onerror = function() {
+
+            console.warn(
+              "No se pudo cargar la imagen:",
+              urlFinal
+            );
+
+            imagen.style.opacity = '1';
+          };
+
+
+          nuevaImagen.src =
+            `${urlFinal}${urlFinal.includes('?') ? '&' : '?'}cb=${Date.now()}`;
+
+
+          ultimaFoto = urlFinal;
+        }
+
+
+        console.log(
+          `Datos actualizados: ${new Date().toLocaleTimeString()}`
+        );
+
+      } catch (error) {
+
+        console.warn(
+          "No se pudieron actualizar los datos:",
+          error.message
+        );
+
+      } finally {
+
+        cargando = false;
       }
     }
 
+
+    // =========================================================
+    // CARGA INICIAL
+    // =========================================================
+
     cargarDatos();
+
+
+    // =========================================================
+    // ACTUALIZACIÓN AUTOMÁTICA
+    // =========================================================
+    //
+    // Consulta el Spreadsheet cada 10 segundos.
+    //
+    // Puedes cambiar 10000 por:
+    //
+    // 5000  = 5 segundos
+    // 10000 = 10 segundos
+    // 30000 = 30 segundos
+    // 60000 = 1 minuto
+    //
+
+    setInterval(cargarDatos, 10000);
+
   </script>
+
 </body>
 </html>
